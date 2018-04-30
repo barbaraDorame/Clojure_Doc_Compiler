@@ -2,7 +2,6 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <regex>
 #include <vector>
 #include <sstream>
 
@@ -40,6 +39,8 @@ enum TOKEN {
     T_LAST, // last
     T_PRINTLN, // println
     T_PRINTF, // printf
+    T_NOT, // not
+    T_IN, // in
     T_PLUS, // +
     T_MINUS, // -
     T_STAR, // *
@@ -47,7 +48,6 @@ enum TOKEN {
     T_BACKSLASH, /* \ */
     T_VAR, //variable
     T_SINGLEQUOTE, // '
-    T_PERCENTAGE, // %
     T_QUOTE, // "
     T_EQUAL, // =
     T_GREATER_THAN, // >
@@ -55,9 +55,6 @@ enum TOKEN {
     T_EQUAL_GREATER, // >=
     T_EQUAL_LESS, // <=
     T_HASHTAG, // #
-    T_CASHMONEY, // $
-    T_QUESTIONMARK, // ?
-    T_UNDERSCORE, // _
     T_IDENTIFIER, // ALFABETO
     T_CONSTANT, // ...-9...0...9...
     T_STRING
@@ -136,11 +133,8 @@ string CleanLex(string file)
     return lex;
 }
 
-vector<Identifier<String>> Tokenizer(string lex)
+vector<Identifier> Tokenizer(string lex)
 {
-    //regex var("(_)([a-z]+|[A-z]+)*[1-9]*([a-z]|[A-z])*$");
-    //regex num("[0-9]+(.?[0.9]*)");
-
     bool acceptedStates[106];
     int **dfa = new int*[106];
     for(int i = 0; i < 106; i++) dfa[i] = new int[127];
@@ -152,6 +146,7 @@ vector<Identifier<String>> Tokenizer(string lex)
     acceptedStates[3] = true; // T_OR
     acceptedStates[6] = true; // T_AND
     acceptedStates[8] = true; // T_IF
+    acceptedStates[9] = true; // T_IN
     acceptedStates[10] = true; // T_INC
     acceptedStates[14] = true; // T_TRUE
     acceptedStates[19] = true; // T_FALSE
@@ -266,11 +261,10 @@ vector<Identifier<String>> Tokenizer(string lex)
     dfa[1]['{'] = 84; // { -> 84
     dfa[1]['}'] = 85; // } -> 85
     dfa[1]['>'] = 86; // > -> 86
-    dfa[86]['='] = 87; // = -> 85
+    dfa[86]['='] = 90; // = -> 85
     dfa[1]['<'] = 88; // < -> 88
-    dfa[88]['='] = 89; // = -> 89
+    dfa[88]['='] = 90; // = -> 89
     dfa[1]['='] = 90; // = -> 90
-    dfa[90]['='] = 91; // = -> 91
     dfa[1]['!'] = 92; // ! -> 92
     dfa[92]['='] = 93; // = -> 93
     dfa[1]['+'] = 94; // + -> 94
@@ -301,6 +295,7 @@ vector<Identifier<String>> Tokenizer(string lex)
         dfa2[1][i] = 2;
         dfa2[2][i] = 2;
     }
+
     dfa2[1]['['] = 0;
     dfa2[1][']'] = 0;
     dfa2[2]['['] = 0;
@@ -315,12 +310,12 @@ vector<Identifier<String>> Tokenizer(string lex)
     string aux;
 
     for (int i = 0; i < lex.length() ; ++i) {
-        aux = '\0'
+        aux = '\0';
         state = 1;
         state2 = 1;
         j = i;
         while (dfa[state][lex[j]] || dfa2[state2][lex[j]]) {
-            aux += lex[i]
+            aux += lex[i];
             state = dfa[state][lex[j]];
             state2 = dfa2[state2][lex[j]];
             if (acceptedStates[state] || acceptedStates2[state2]) {
@@ -344,6 +339,7 @@ vector<Identifier<String>> Tokenizer(string lex)
 Identifier create_token(int state, string value)
 {
     Identifier token;
+    TOKEN aux;
     token.value = value;
     switch(state) {
         case 82:
@@ -364,14 +360,14 @@ Identifier create_token(int state, string value)
             break;
         case 84:
             token.tag = T_LEFT_CURLYBRACKET;
-            token.lex = "T_LEFT_CURLYBRACKET"
+            token.lex = "T_LEFT_CURLYBRACKET";
             break;
         case 85:
             token.tag = T_RIGHT_CURLYBRACKET;
             token.lex = "T_RIGHT_CURLYBRACKET";
             break;
         case 104:
-            toke.tag = T_COMMA;
+            token.tag = T_COMMA;
             token.lex = "T_COMMA";
             break;
         case 3:
@@ -388,10 +384,6 @@ Identifier create_token(int state, string value)
         case 14:
             token.tag = T_TRUE;
             token.lex = "T_TRUE";
-            break;
-        case 102:
-            token.tag = T_DOT;
-            token.lex = "T_DOT";
             break;
         case 19:
             token.tag = T_FALSE;
@@ -434,10 +426,6 @@ Identifier create_token(int state, string value)
             token.tag = T_SECOND;
             token.lex = "T_SECOND";
             break;
-        case 44:
-            token.tag = T_GET;
-            token.lex = "T_GET";
-            break;
         case 50:
             token.tag = T_VECTOR;
             token.lex = "T_VECTOR";
@@ -467,10 +455,6 @@ Identifier create_token(int state, string value)
             token.tag = T_CONSTANT;
             token.lex = "T_CONSTANT";
             break;
-        case 44:
-            token.tag = T_GET;
-            token.lex = "T_GET";
-            break;
         case 77:
         case 79:
             token.tag = T_STRING;
@@ -482,23 +466,19 @@ Identifier create_token(int state, string value)
             break;
         case 87:
             token.tag = T_EQUAL_GREATER;
-            token.lex = "T_EQUAL_GREATER"
+            token.lex = "T_EQUAL_GREATER";
             break;
         case 88:
             token.tag = T_LESS_THAN;
             token.lex = "T_LESS_THAN";
             break;
-        caso 89:
+        case 89:
             token.tag = T_EQUAL_LESS;
             token.lex = "T_EQUAL_LESS";
             break;
         case 90:
             token.tag = T_EQUAL;
             token.lex = "T_EQUAL";
-            break;
-        case 93:
-            token.tag = T_NOT_EQUAL;
-            token.lex = "T_NOT_EQUAL";
             break;
         case 94:
             token.tag = T_PLUS;
@@ -510,7 +490,13 @@ Identifier create_token(int state, string value)
             break;
         case 98:
             token.tag = T_STAR;
-            token.less = "T_STAR";
+            token.lex = "T_STAR";
+            break;
     }
     return token;
+}
+
+void parse(string lex)
+{
+
 }
